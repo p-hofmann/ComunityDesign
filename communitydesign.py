@@ -539,17 +539,21 @@ class CommunityDesign(PrepareStrains):
 		@type number_of_samples: int | long
 		@param metadata_table_all:
 		@type metadata_table_all: MetadataTable
+
+		@return:
+		@rtype: list[str|unicode]
 		"""
 
 		assert isinstance(list_of_communities, list)
 		for community in list_of_communities:
 			assert isinstance(community, Community)
 		assert isinstance(metadata_table_all, MetadataTable)
+		list_of_output_paths = []
 
 		# read communities and adapt to ratio
 		for index_sample in range(number_of_samples):  # TODO sample number
 			communities = []
-			list_of_communitiy_total_distribution = [0] * len(list_of_communities)
+			list_of_community_total_distribution = [0] * len(list_of_communities)
 			sample_total_distribution = 0
 
 			# create list of community files for one sample
@@ -570,15 +574,15 @@ class CommunityDesign(PrepareStrains):
 					if genome_id in genomes:
 						raise ValueError("Genome id '{}' not unique".format(genome_id))
 					genomes.add(genome_id)
-					list_of_communitiy_total_distribution[index_community] += float(distribution)  # * float(sequence_info[4])
-				sample_total_distribution += list_of_communitiy_total_distribution[index_community]
+					list_of_community_total_distribution[index_community] += float(distribution)  # * float(sequence_info[4])
+				sample_total_distribution += list_of_community_total_distribution[index_community]
 				communities[index_community].close()
 
 			# out.append(read_communities[0][0])
 			list_of_community_factor = [0.0] * len(list_of_communities)
 			for index_community, c in enumerate(list_of_file_paths):
 				ratio = float(list_of_communities[index_community].ratio)
-				community_total_distribution = float(list_of_communitiy_total_distribution[index_community])
+				community_total_distribution = float(list_of_community_total_distribution[index_community])
 				current_proportion_in_sample = community_total_distribution / float(sample_total_distribution)
 				list_of_community_factor[index_community] = ratio / current_proportion_in_sample
 				# self.update_community(communities[index_community], factor)
@@ -596,13 +600,12 @@ class CommunityDesign(PrepareStrains):
 					communities,
 					list_of_community_factor,
 					stream_output)
+			list_of_output_paths.append(file_path_output)
 
 			# delete now obsolete files
 			for file_path in list_of_file_paths:
 				os.remove(file_path)
-
-			# todo: away with this
-			# write taxonomic profile
+		return list_of_output_paths
 
 	@staticmethod
 	def _write_joined_community(communities, list_of_community_factor, stream_output):
