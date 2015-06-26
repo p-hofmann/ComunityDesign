@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 __author__ = 'hofmann'
-__version__ = '0.0.9'
+__version__ = '0.1.0'
 
 import io
 import StringIO
@@ -62,9 +62,7 @@ class MetadataTable(Compress):
 			row = stream_input.readline().rstrip('\n').rstrip('\r')
 			list_of_column_names = row.split(separator)
 			assert self._has_unique_columns(list_of_column_names), "Column names must be unique!"
-			self._list_of_column_names = list_of_column_names
-			for column_name in self._list_of_column_names:
-				self._meta_table[column_name] = []
+			return list_of_column_names
 
 	def parse_file(self, file_path, separator=None, column_names=False, comment_line=None):
 		"""
@@ -119,30 +117,33 @@ class MetadataTable(Compress):
 		self.clear()
 
 		# read column names
+		list_of_column_names = []
 		if column_names:
-			self._parse_column_names(stream_input, separator)
+			list_of_column_names = self._parse_column_names(stream_input, separator)
 
 		# read rows
-		dict_row = dict()
 		line_count = 0
 		for line in stream_input:
+			dict_row = dict()
 			line_count += 1
 			row = line.rstrip('\n').rstrip('\r')
 			if line[0] in comment_line or len(row) == 0:
 				continue
-			self._number_of_rows += 1
+
 			row_cells = row.split(separator)
-			number_of_columns = len(self.get_column_names())
+			number_of_columns = len(list_of_column_names)
 			if number_of_columns != 0 and number_of_columns != len(row_cells):
 				msg = "Format error. Bad number of values in line {}".format(line_count)
 				self._logger.error(msg)
 				raise ValueError(msg)
 			for index, value in enumerate(row_cells):
 				if column_names:
-					column_name = self._list_of_column_names[index]
+					column_name = list_of_column_names[index]
 				else:
 					column_name = index
 				dict_row[column_name] = row_cells[index].rstrip('\n').rstrip('\r')
+			if number_of_columns == 0:
+				list_of_column_names = sorted(dict_row.keys())
 			yield dict_row
 
 	def read(self, file_path, separator=None, column_names=False, comment_line=None):
@@ -181,7 +182,9 @@ class MetadataTable(Compress):
 
 			# read column names
 			if column_names:
-				self._parse_column_names(file_handler, separator)
+				self._list_of_column_names = self._parse_column_names(file_handler, separator)
+				for column_name in self._list_of_column_names:
+					self._meta_table[column_name] = []
 
 			# read rows
 			row_count = 0
@@ -205,9 +208,8 @@ class MetadataTable(Compress):
 						if column_name not in self._meta_table:
 							self._meta_table[column_name] = []
 					self._meta_table[column_name].append(row_cells[index].rstrip('\n').rstrip('\r'))
-
-			if not column_names:
-				self._list_of_column_names = sorted(self._meta_table.keys())
+				if number_of_columns == 0:
+					self._list_of_column_names = sorted(self._meta_table.keys())
 
 	def write(
 		self, file_path, separator=None, column_names=False, compression_level=0,
