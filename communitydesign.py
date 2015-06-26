@@ -543,7 +543,6 @@ class CommunityDesign(PrepareStrains):
 		@return:
 		@rtype: list[str|unicode]
 		"""
-
 		assert isinstance(list_of_communities, list)
 		for community in list_of_communities:
 			assert isinstance(community, Community)
@@ -609,6 +608,15 @@ class CommunityDesign(PrepareStrains):
 
 	@staticmethod
 	def _write_joined_community(communities, list_of_community_factor, stream_output):
+		"""
+
+		@param communities:
+		@type communities: generator[ dict[int|long|str|unicode, str|unicode] ]
+		@param list_of_community_factor:
+		@type list_of_community_factor: list[float]
+		@param stream_output:
+		@type stream_output: file | FileIO | StringIO | basestring
+		"""
 		line_format = "{gid}\t{filename}\t{distr}\t{length}\n"
 		for community_index, community in enumerate(communities):
 			factor = list_of_community_factor[community_index]
