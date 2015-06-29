@@ -40,7 +40,8 @@ class TaxonomicProfile(Validator):
 		metadata_table = MetadataTable(logfile=self._logfile, verbose=self._verbose)
 		for index_abundance, file_path in enumerate(list_of_file_paths):
 			community_abundance = metadata_table.parse_file(file_path, column_names=False)
-			file_path_output = os.path.join(directory_output, self._filename_taxonomic_profile.format(index_abundance))
+			file_path_output = os.path.join(directory_output, self._filename_taxonomic_profile.format(
+				sample_index=index_abundance))
 			with open(file_path_output, 'w') as stream_output:
 				self.write_taxonomic_profile(
 					community_abundance,
@@ -67,16 +68,20 @@ class TaxonomicProfile(Validator):
 		# for community in community_abundance:
 		# 	all_communities += community
 
-		for genome_id, file_name, distribution, total_length in community_abundance:
+		for dict_row in community_abundance:
+			genome_id = dict_row[0]
+			# file_name = dict_row[1]
+			distribution = dict_row[2]
+			total_length = dict_row[3]
 			if genome_id in genome_abundance:
-				raise "genome id '{}' is not unique!".format(genome_id)
+				raise IOError("genome id '{}' is not unique!".format(genome_id))
 			genome_abundance[genome_id] = float(distribution)*float(total_length)
 			total_abundance += genome_abundance[genome_id]
 
 		for key, value in genome_abundance.items():
 			genome_abundance[key] = value / total_abundance
 
-			self._stream_taxonomic_profile(stream_output, genome_abundance, metadata_table, sample_id)
+		self._stream_taxonomic_profile(stream_output, genome_abundance, metadata_table, sample_id)
 
 	def _stream_taxonomic_profile(self, stream_output, genome_id_to_percent, metadata_table, sample_id=""):
 		"""
@@ -145,6 +150,8 @@ class TaxonomicProfile(Validator):
 				tax_id, ranks=self._ranks, default_value=None)
 			if genome_id_to_lineage[genome_id][-1] is not None:
 				continue
+
+			# TODO: make sure this results in unique strain ids
 			if tax_id not in strains_by_taxid:
 				strains_by_taxid[tax_id] = 0
 			strains_by_taxid[tax_id] += 1

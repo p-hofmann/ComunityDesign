@@ -311,12 +311,15 @@ class CommunityDesign(PrepareStrains):
 		@type genome_id_to_distributions: dict[str|unicode, list[float]]
 		@param genome_id_to_file_name:
 		@type genome_id_to_file_name: dict[str|unicode, str|unicode]
+		@param index_community:
+		@type index_community: int | str | unicode
 		"""
 		list_of_genome_id = genome_id_to_distributions.keys()
 		distributions = len(genome_id_to_distributions[list_of_genome_id[0]])
 		for index_sample in range(0, distributions):
 			out_file_path = os.path.join(
-				directory_output, self._filename_distribution_comunity.format(index_community, index_sample))
+				directory_output, self._filename_distribution_comunity.format(
+					comunity_index=index_community, sample_index=index_sample))
 			with open(out_file_path, 'w') as out_file_handler:
 				for genome_id in genome_id_to_distributions:
 					distribution = genome_id_to_distributions[genome_id][index_sample]
@@ -560,7 +563,8 @@ class CommunityDesign(PrepareStrains):
 			for index_community, c in enumerate(list_of_communities):
 				dist_file_name = os.path.join(
 					directory_distributions,
-					self._filename_distribution_comunity.format(index_community, index_sample))
+					self._filename_distribution_comunity.format(
+						comunity_index=index_community, sample_index=index_sample))
 				list_of_file_paths.append(dist_file_name)
 
 			metadata_table = MetadataTable(logfile=self._logfile, verbose=self._verbose)
@@ -569,8 +573,13 @@ class CommunityDesign(PrepareStrains):
 				# communities_length.append(0)
 
 				genomes = set()
-				for genome_id, filename, distribution, genome_length in communities[index_community]:
+				for dict_row in communities[index_community]:
+					genome_id = dict_row[0]
+					# filename = dict_row[1]
+					distribution = dict_row[2]
+					# genome_length = dict_row[3]
 					if genome_id in genomes:
+						# print genome_id, filename, distribution, genome_length
 						raise ValueError("Genome id '{}' not unique".format(genome_id))
 					genomes.add(genome_id)
 					list_of_community_total_distribution[index_community] += float(distribution)  # * float(sequence_info[4])
@@ -593,7 +602,7 @@ class CommunityDesign(PrepareStrains):
 
 			# print_ratios(communities)
 			file_path_output = os.path.join(
-				directory_distributions, self._filename_distribution_comunity_joint.format(index_sample))
+				directory_distributions, self._filename_distribution_comunity_joint.format(sample_index=index_sample))
 			with open(file_path_output, 'w') as stream_output:
 				self._write_joined_community(
 					communities,
@@ -620,7 +629,12 @@ class CommunityDesign(PrepareStrains):
 		line_format = "{gid}\t{filename}\t{distr}\t{length}\n"
 		for community_index, community in enumerate(communities):
 			factor = list_of_community_factor[community_index]
-			for genome_id, filename, distribution, genome_length in community:
+			# for genome_id, filename, distribution, genome_length in community:
+			for dict_row in community:
+				genome_id = dict_row[0]
+				filename = dict_row[1]
+				distribution = dict_row[2]
+				genome_length = dict_row[3]
 				stream_output.write(line_format.format(
 					gid=genome_id,
 					filename=filename,
