@@ -7,8 +7,9 @@ import os
 import sys
 import shutil
 from communitydesign import PrepareStrains, CommunityDesign, Community
+from taxonomicprofile import TaxonomicProfile
 from scripts.MetaDataTable.metadatatable import MetadataTable
-
+from scripts.NcbiTaxonomy.ncbitaxonomy import NcbiTaxonomy
 
 # ##################################
 #
@@ -81,6 +82,7 @@ class DefaultSetUpCommunityDesign(unittest.TestCase):
 	_success = False
 	log_filename = 'unittest_log.txt'
 	filename_metadata = "meta_data.tsv"
+	filename_metadata2 = "meta_data2.tsv"
 
 	dir_input = "unittest_input"
 	dir_output = "unittest_output_CD_{}"
@@ -96,13 +98,14 @@ class DefaultSetUpCommunityDesign(unittest.TestCase):
 		logfile = os.path.join(self.dir_output, self.log_filename)
 		self.file_stream = open(logfile, 'a')
 		self.test_object = CommunityDesign(
-			max_processors=3,
+			max_processors=4,
 			tmp_dir=self.dir_output,
 			logfile=self.file_stream,
 			verbose=False,
 			debug=False,
 			seed="seed")
 
+		self.taxonomy_directory = os.path.join(self.dir_input, "ncbi-taxonomy_20150130")
 		self.filename_path_genoms = "path_genoms.tsv"
 		self.filename_path_gff = "path_genoms_gen_annotation.tsv"
 		self.directory_distributions = os.path.join(self.dir_output, "distr")
@@ -169,7 +172,88 @@ class TestMethodsCommunityDesign(DefaultSetUpCommunityDesign):
 			min_length=1)
 		# print list_of_drawn_genome_id
 		self.assertListEqual(list_of_drawn_genome_id, expected_result)
-		# self._success = True
+		self._success = True
+
+	def test_merge_communities(self):
+		metadata_table_comby = MetadataTable(verbose=False)
+		file_path_metadata_table = os.path.join(self.dir_input, self.filename_metadata)
+		file_path_metadata_table2 = os.path.join(self.dir_input, self.filename_metadata2)
+		file_path_genome_locations = os.path.join(self.dir_input, self.filename_path_genoms)
+		file_path_gff_locations = os.path.join(self.dir_input, self.filename_path_gff)
+
+		community0 = Community(
+			identifier=str(0),
+			genomes_total=10,
+			genomes_real=4,
+			limit_per_otu=2,
+			file_path_metadata_table=file_path_metadata_table,
+			file_path_genome_locations=file_path_genome_locations,
+			file_path_gff_locations=file_path_gff_locations,
+			ratio=1,
+			mode="differential",
+			log_mu=1,
+			log_sigma=2,
+			gauss_mu=1,
+			gauss_sigma=3,
+			verbose=False)
+		community1 = Community(
+			identifier=str(1),
+			genomes_total=10,
+			genomes_real=1,
+			limit_per_otu=2,
+			file_path_metadata_table=file_path_metadata_table2,
+			file_path_genome_locations=file_path_genome_locations,
+			file_path_gff_locations=file_path_gff_locations,
+			ratio=1,
+			mode="differential",
+			log_mu=1,
+			log_sigma=2,
+			gauss_mu=1,
+			gauss_sigma=3,
+			verbose=False)
+
+		number_of_samples = 5
+		list_of_sequence_names = set()
+		list_of_drawn_genome_id = self.test_object.design(
+			community0,
+			number_of_samples=5,
+			metadata_table_comby=metadata_table_comby,
+			directory_distributions=self.directory_distributions,
+			directory_genomes=self.directory_genomes,
+			directory_metadata=self.directory_metadata,
+			directory_template=None,
+			list_of_sequence_names=list_of_sequence_names,
+			min_length=1)
+
+		list_of_drawn_genome_id.extend(self.test_object.design(
+			community1,
+			number_of_samples=5,
+			metadata_table_comby=metadata_table_comby,
+			directory_distributions=self.directory_distributions,
+			directory_genomes=self.directory_genomes,
+			directory_metadata=self.directory_metadata,
+			directory_template=None,
+			list_of_sequence_names=list_of_sequence_names,
+			min_length=1))
+
+		list_of_communities = [community0, community1]
+		list_of_output_paths = self.test_object.merge_communities(
+			list_of_communities,
+			directory_distributions=self.directory_distributions,
+			number_of_samples=number_of_samples,
+			metadata_table_all=metadata_table_comby)
+		# print list_of_drawn_genome_id
+		self.assertEqual(len(list_of_output_paths), number_of_samples)
+		taxonomy = NcbiTaxonomy(taxonomy_directory=self.taxonomy_directory, verbose=False)
+		tp = TaxonomicProfile(taxonomy, logfile=None, verbose=False, debug=False)
+		tp.write_taxonomic_profile_from_abundance_files(
+			metadata_table_all=metadata_table_comby,
+			list_of_file_paths=list_of_output_paths,
+			directory_output=self.dir_output
+		)
+		out_metadata = os.path.join(self.dir_output, self.filename_metadata)
+		metadata_table_comby.write(out_metadata)
+		self._success = True
 
 
 if __name__ == '__main__':
