@@ -157,14 +157,18 @@ class TaxonomicProfile(Validator):
 			if genome_id_to_lineage[genome_id][-1] is not None:
 				continue
 
-			# TODO: make sure this results in unique strain ids in case of previous assigned ids
 			if tax_id not in strains_by_taxid:
 				strains_by_taxid[tax_id] = 0
 			strains_by_taxid[tax_id] += 1
+
 			if genome_id in genome_id_to_strain_id and genome_id_to_strain_id[genome_id]:
 				strain_id = genome_id_to_strain_id[genome_id]
 			else:
 				strain_id = "{}.{}".format(tax_id, strains_by_taxid[tax_id])
+				# make sure assigned strain ids are unique, in case of previous assigned ids
+				while strain_id in genome_id_to_strain_id.values():
+					strains_by_taxid[tax_id] += 1
+					strain_id = "{}.{}".format(tax_id, strains_by_taxid[tax_id])
 				genome_id_to_strain_id[genome_id] = strain_id
 			genome_id_to_lineage[genome_id][-1] = strain_id
 			strain_id_to_genome_id[strain_id] = genome_id
