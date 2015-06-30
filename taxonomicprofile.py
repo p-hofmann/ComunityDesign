@@ -7,6 +7,12 @@ from scripts.Validator.validator import Validator
 
 
 class TaxonomicProfile(Validator):
+	"""
+	Constructing taxonomic profiles from files with relative abundances.
+	"""
+
+	_taxonomic_profile_version = "0.9.1"
+
 	def __init__(self, taxonomy, logfile=None, verbose=True, debug=False):
 		"""
 		@param taxonomy: taxonomy handler
@@ -25,40 +31,42 @@ class TaxonomicProfile(Validator):
 		self._filename_taxonomic_profile = "taxonomic_profile_{sample_index}.txt"
 
 	def write_taxonomic_profile_from_abundance_files(
-		self, metadata_table_all, list_of_file_paths, directory_output, sample_id=""):
+		self, metadata_table, list_of_file_paths, directory_output, sample_id=""):
 		"""
+		Write a taxonomic profile file for each relative abundance file
 
-		@param metadata_table_all:
-		@type metadata_table_all: MetadataTable
-		@param list_of_file_paths:
+		@param metadata_table: Contains metadata of all communities
+		@type metadata_table: MetadataTable
+		@param list_of_file_paths: List of abundance file paths
 		@type list_of_file_paths: list[str | unicode]
-		@param directory_output:
+		@param directory_output: Profiles are written in this directory
 		@type directory_output: str | unicode
-		@param sample_id:
+		@param sample_id: Identifier of a sample
 		@type sample_id: str | unicode
 		"""
-		metadata_table = MetadataTable(logfile=self._logfile, verbose=self._verbose)
+		metadata_table_tmp = MetadataTable(logfile=self._logfile, verbose=self._verbose)
 		for index_abundance, file_path in enumerate(list_of_file_paths):
-			community_abundance = metadata_table.parse_file(file_path, column_names=False)
+			community_abundance = metadata_table_tmp.parse_file(file_path, column_names=False)
 			file_path_output = os.path.join(directory_output, self._filename_taxonomic_profile.format(
 				sample_index=index_abundance))
 			with open(file_path_output, 'w') as stream_output:
 				self.write_taxonomic_profile(
 					community_abundance,
 					stream_output,
-					metadata_table_all,
+					metadata_table,
 					sample_id)
 
 	def write_taxonomic_profile(self, community_abundance, stream_output, metadata_table, sample_id=""):
 		"""
+		Stream a taxonomic profile by list of relative abundances
 
-		@param community_abundance:
+		@param community_abundance: list of relative abundances
 		@type community_abundance: generator[ dict[int|long|str|unicode, str|unicode] ]
-		@param stream_output:
+		@param stream_output: Output of taxonomic profile
 		@type stream_output: file | FileIO | StringIO
-		@param metadata_table:
+		@param metadata_table: Contains metadata of all communities
 		@type metadata_table: MetadataTable
-		@param sample_id:
+		@param sample_id: Identifier of a sample
 		@type sample_id: str | unicode
 		"""
 		assert isinstance(metadata_table, MetadataTable)
@@ -81,14 +89,15 @@ class TaxonomicProfile(Validator):
 
 	def _stream_taxonomic_profile(self, stream_output, genome_id_to_percent, metadata_table, sample_id=""):
 		"""
+		Stream a taxonomic profile by list of percentages by genome id
 
-		@param stream_output:
+		@param stream_output: Output of taxonomic profile
 		@type stream_output: file | FileIO | StringIO
-		@param genome_id_to_percent:
+		@param genome_id_to_percent: Percentage for each genome id
 		@type genome_id_to_percent: dict[str|unicode, float]
-		@param metadata_table:
+		@param metadata_table: Contains metadata of all communities
 		@type metadata_table: MetadataTable
-		@param sample_id:
+		@param sample_id: Identifier of a sample
 		@type sample_id: str | unicode
 		"""
 		strain_id_to_genome_id = {}
@@ -122,17 +131,18 @@ class TaxonomicProfile(Validator):
 	def _get_genome_id_to_lineage(
 		self, list_of_genome_id, genome_id_to_taxid, strain_id_to_genome_id, genome_id_to_strain_id):
 		"""
+		Returnes the lineage for each genome id, assigning new strain id if not available
 
-		@param list_of_genome_id:
+		@param list_of_genome_id: List of identifier of genomes
 		@type list_of_genome_id: list[str|unicode]
-		@param genome_id_to_taxid:
+		@param genome_id_to_taxid: Assigned taxid for each genome id
 		@type genome_id_to_taxid: dict[str|unicode, str|unicode]
-		@param strain_id_to_genome_id:
+		@param strain_id_to_genome_id: Mapping from strain id to genome id
 		@type strain_id_to_genome_id: dict[str|unicode, str|unicode]
-		@param genome_id_to_strain_id:
+		@param genome_id_to_strain_id: Mapping from genome id to strain id
 		@type genome_id_to_strain_id: dict[str|unicode, str|unicode]
 
-		@return:
+		@return: lineage for each genome id using genome id as key
 		@rtype: dict[str|unicode, list[None|str|unicode]]
 		"""
 		strains_by_taxid = {}
@@ -147,7 +157,7 @@ class TaxonomicProfile(Validator):
 			if genome_id_to_lineage[genome_id][-1] is not None:
 				continue
 
-			# TODO: make sure this results in unique strain ids
+			# TODO: make sure this results in unique strain ids in case of previous assigned ids
 			if tax_id not in strains_by_taxid:
 				strains_by_taxid[tax_id] = 0
 			strains_by_taxid[tax_id] += 1
@@ -162,13 +172,14 @@ class TaxonomicProfile(Validator):
 
 	def _get_percent_by_rank_by_taxid(self, genome_id_to_lineage, genome_id_to_percent):
 		"""
+		Return the percentage for each taxid of a list of default ranks
 
-		@param genome_id_to_lineage:
+		@param genome_id_to_lineage: Mapping from genome id to a lineage (list)
 		@type genome_id_to_lineage: dict[str|unicode, list[None|str|unicode]]
-		@param genome_id_to_percent:
+		@param genome_id_to_percent: Mapping from genome id to percentage
 		@type genome_id_to_percent: dict[str|unicode, float]
 
-		@return:
+		@return: Percentage for each taxid of a list of default ranks as dictionary of dictionaries
 		@rtype: dict[str|unicode, dict[str|unicode, float]]
 		"""
 		percent_by_rank_by_taxid = {}
@@ -189,14 +200,15 @@ class TaxonomicProfile(Validator):
 
 	def _stream_tp_rows(self, stream_output, percent_by_rank_by_taxid, strain_id_to_genome_id, genome_id_to_otu):
 		"""
+		Stream the rows of the taxonomic profile.
 
-		@param stream_output:
+		@param stream_output: Output of taxonomic profile
 		@type stream_output: file | FileIO | StringIO
-		@param percent_by_rank_by_taxid:
+		@param percent_by_rank_by_taxid: Percentage for each taxid of a list of default ranks as dictionary of dictionaries
 		@type percent_by_rank_by_taxid: dict[str|unicode, dict[str|unicode, float]]
-		@param strain_id_to_genome_id:
+		@param strain_id_to_genome_id: Map from strain id to a genome identifier
 		@type strain_id_to_genome_id: dict[str|unicode, str|unicode]
-		@param genome_id_to_otu:
+		@param genome_id_to_otu: Map from genome id to an otu identifier
 		@type genome_id_to_otu: dict[str|unicode, str|unicode]
 		"""
 		row_format = "{taxid}\t{rank}\t{taxpath}\t{taxpath_sn}\t{abp:.4f}\t{gid}\t{otu}\n"
@@ -229,13 +241,14 @@ class TaxonomicProfile(Validator):
 
 	def _stream_tp_header(self, output_stream, identifier):
 		"""
+		Stream the header of the taxonomic profile.
 
-		@param output_stream:
+		@param output_stream: Output of taxonomic profile
 		@type output_stream: file | FileIO | StringIO
-		@param identifier:
+		@param identifier: Identifier of a sample
 		@type identifier: str | unicode
 		"""
 		output_stream.write("@SampleID:{}\n".format(identifier))
-		output_stream.write("@Version:0.9.1\n")
+		output_stream.write("@Version:{}\n".format(self._taxonomic_profile_version))
 		output_stream.write("@Ranks:{ranks}\n\n".format(ranks="|".join(self._ranks)))
 		output_stream.write("@@TAXID\tRANK\tTAXPATH\tTAXPATHSN\tPERCENTAGE\t_CAMI_genomeID\t_CAMI_OTU\n")
