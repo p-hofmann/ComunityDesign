@@ -550,10 +550,10 @@ class CommunityDesign(PrepareStrains):
 		for community in list_of_communities:
 			assert isinstance(community, Community)
 		assert isinstance(metadata_table_all, MetadataTable)
-		list_of_output_paths = []
 
 		# read communities and adapt to ratio
-		for index_sample in range(number_of_samples):  # TODO sample number
+		list_of_output_paths = []
+		for index_sample in range(number_of_samples):
 			communities = []
 			list_of_community_total_distribution = [0] * len(list_of_communities)
 			sample_total_distribution = 0
@@ -573,11 +573,7 @@ class CommunityDesign(PrepareStrains):
 				# communities_length.append(0)
 
 				genomes = set()
-				for dict_row in communities[index_community]:
-					genome_id = dict_row[0]
-					# filename = dict_row[1]
-					distribution = dict_row[2]
-					# genome_length = dict_row[3]
+				for genome_id, file_name, distribution, genome_length in communities[index_community]:
 					if genome_id in genomes:
 						# print genome_id, filename, distribution, genome_length
 						raise ValueError("Genome id '{}' not unique".format(genome_id))
@@ -629,12 +625,7 @@ class CommunityDesign(PrepareStrains):
 		line_format = "{gid}\t{filename}\t{distr}\t{length}\n"
 		for community_index, community in enumerate(communities):
 			factor = list_of_community_factor[community_index]
-			# for genome_id, filename, distribution, genome_length in community:
-			for dict_row in community:
-				genome_id = dict_row[0]
-				filename = dict_row[1]
-				distribution = dict_row[2]
-				genome_length = dict_row[3]
+			for genome_id, filename, distribution, genome_length in community:
 				stream_output.write(line_format.format(
 					gid=genome_id,
 					filename=filename,
