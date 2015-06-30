@@ -85,7 +85,7 @@ class MetadataTable(Compress):
 			for row in self.parse_stream(file_handler, separator, column_names, comment_line):
 				yield row
 
-	def parse_stream(self, stream_input, separator=None, column_names=False, comment_line=None):
+	def parse_stream(self, stream_input, separator=None, column_names=False, comment_line=None, as_list=True):
 		"""
 			Reading comma or tab separated values from a stream
 
@@ -97,8 +97,10 @@ class MetadataTable(Compress):
 			@type column_names: bool
 			@param comment_line: character or list of character indication comment lines
 			@type comment_line: str | unicode | list[str|unicode]
+			@param as_list: If true lists are returned, else dicts.
+			@param as_list: bool
 
-			@return: Generator of dictionary representing rows
+			@return: Generator returning dictionary or list
 			@rtype: generator[ dict[int|long|str|unicode, str|unicode] ]
 			#
 		"""
@@ -117,25 +119,34 @@ class MetadataTable(Compress):
 		self.clear()
 
 		# read column names
+		number_of_columns = 0
 		list_of_column_names = []
 		if column_names:
 			list_of_column_names = self._parse_column_names(stream_input, separator)
+			number_of_columns = len(list_of_column_names)
 
 		# read rows
 		line_count = 0
 		for line in stream_input:
-			dict_row = dict()
 			line_count += 1
 			row = line.rstrip('\n').rstrip('\r')
 			if line[0] in comment_line or len(row) == 0:
 				continue
 
 			row_cells = row.split(separator)
-			number_of_columns = len(list_of_column_names)
-			if number_of_columns != 0 and number_of_columns != len(row_cells):
+			if not column_names and number_of_columns == 0:
+				number_of_columns = len(row_cells)
+
+			if number_of_columns != len(row_cells):
 				msg = "Format error. Bad number of values in line {}".format(line_count)
 				self._logger.error(msg)
 				raise ValueError(msg)
+
+			if as_list:
+				yield row_cells
+				continue
+
+			dict_row = dict()
 			for index, value in enumerate(row_cells):
 				if column_names:
 					column_name = list_of_column_names[index]
