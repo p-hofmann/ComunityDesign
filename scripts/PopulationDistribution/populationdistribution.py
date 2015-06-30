@@ -48,6 +48,9 @@ class PopulationDistribution(Validator):
 		if seed is not None:
 			random.seed(seed)
 
+	def get_valid_modes(self):
+		return self._modi
+
 	@staticmethod
 	def get_initial_list(size_of_population, number_of_samples):
 		"""
