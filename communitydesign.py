@@ -321,30 +321,31 @@ class CommunityDesign(PrepareStrains):
 		assert self.validate_dir(self._tmp_dir)
 
 	def _write_distribution_files(
-		self, directory_output, genome_id_to_total_length, genome_id_to_distributions, genome_id_to_file_name,
+		self, directory_output, genome_id_to_total_length, genome_id_to_abundance, genome_id_to_file_name,
 		community_id):
 		"""
+		Write abundance file for each sample
 
 		@param directory_output: Distribution files will be stored here
 		@type directory_output: str | unicode
 		@param genome_id_to_total_length: Total sequence length of each genome
 		@type genome_id_to_total_length: dict[str|unicode, int|long]
-		@param genome_id_to_distributions: Drawn distribution for each genome id
-		@type genome_id_to_distributions: dict[str|unicode, list[float]]
+		@param genome_id_to_abundance: Drawn distribution for each genome id
+		@type genome_id_to_abundance: dict[str|unicode, list[float]]
 		@param genome_id_to_file_name: genome file path of each genome id
 		@type genome_id_to_file_name: dict[str|unicode, str|unicode]
 		@param community_id: Id of a community
 		@type community_id: int | str | unicode
 		"""
-		list_of_genome_id = genome_id_to_distributions.keys()
-		distributions = len(genome_id_to_distributions[list_of_genome_id[0]])
+		list_of_genome_id = genome_id_to_abundance.keys()
+		distributions = len(genome_id_to_abundance[list_of_genome_id[0]])
 		for index_sample in range(0, distributions):
 			out_file_path = os.path.join(
 				directory_output, self._filename_distribution_comunity.format(
 					comunity_index=community_id, sample_index=index_sample))
 			with open(out_file_path, 'w') as out_file_handler:
-				for genome_id in genome_id_to_distributions:
-					distribution = genome_id_to_distributions[genome_id][index_sample]
+				for genome_id in genome_id_to_abundance:
+					distribution = genome_id_to_abundance[genome_id][index_sample]
 					file_name = genome_id_to_file_name[genome_id]
 					total_length = genome_id_to_total_length[genome_id]
 					out_file_handler.write("{id}\t{file_name}\t{dist}\t{len}\n".format(
@@ -354,35 +355,36 @@ class CommunityDesign(PrepareStrains):
 						len=total_length))
 
 	def design(
-		self, community, number_of_samples, metadata_table_comby,
-		directory_distributions, directory_genomes, directory_metadata, directory_template,
-		set_of_sequence_names=None, min_length=1):
+		self, community, number_of_samples, metadata_table,
+		directory_out_distributions, directory_out_genomes, directory_out_metadata, directory_in_template=None,
+		set_of_sequence_names=None, min_sequence_length=1):
 		"""
+		Design artificial communities, of a specific design, for a given number of samples
 
-		@param community:
+		@param community: Input data for the creation of a community
 		@type community: Community
-		@param number_of_samples:
+		@param number_of_samples: Amount of samples to be simulated
 		@type number_of_samples: int
-		@param metadata_table_comby:
-		@type metadata_table_comby: MetadataTable
-		@param directory_distributions:
-		@type directory_distributions: str | unicode
-		@param directory_genomes:
-		@type directory_genomes: str | unicode
-		@param directory_metadata:
-		@type directory_metadata: str | unicode
-		@param directory_template:
-		@type directory_template: str | unicode
-		@param set_of_sequence_names:
+		@param metadata_table: Will contain metadata of all (simulated) genomes/plasmids drawn
+		@type metadata_table: MetadataTable
+		@param directory_out_distributions: Output directory where distribution files will be placed
+		@type directory_out_distributions: str | unicode
+		@param directory_out_genomes:  Output directory where cleaned up raw fasta files will be placed
+		@type directory_out_genomes: str | unicode
+		@param directory_out_metadata: Metadata tables of separated by chosen and not chosen genomes are written to here
+		@type directory_out_metadata: str | unicode
+		@param directory_in_template: contains template data for strain simulation
+		@type directory_in_template: str | unicode
+		@param set_of_sequence_names: Set of all previously used sequence names, making sure all will be unique
 		@type set_of_sequence_names: set[str|unicode]
-		@param min_length:
-		@type min_length: int | long
+		@param min_sequence_length: Minimum sequence length
+		@type min_sequence_length: int | long
 
-		@return:
+		@return: List of drawn genome ids
 		@rtype: list[str|unicode]
 		"""
 		assert isinstance(community, Community)
-		assert isinstance(metadata_table_comby, MetadataTable)
+		assert isinstance(metadata_table, MetadataTable)
 
 		if set_of_sequence_names is None:
 			set_of_sequence_names = set()
@@ -395,7 +397,7 @@ class CommunityDesign(PrepareStrains):
 		if community.simulate_strains:
 			strain_simulation = StrainSimulationWrapper(
 				executable_sim=None,
-				directory_template=directory_template,
+				directory_template=directory_in_template,
 				column_name_gid=self._column_name_genome_id,
 				column_name_ncbi=self._column_name_ncbi,
 				column_name_source=self._column_name_source,
@@ -417,8 +419,8 @@ class CommunityDesign(PrepareStrains):
 
 		# draw strains
 		self._logger.info("Drawing strains.")
-		metadata_table = MetadataTable(logfile=self._logfile, verbose=self._verbose)
-		metadata_table.read(community.file_path_metadata_table, column_names=True)
+		metadata_table_community = MetadataTable(logfile=self._logfile, verbose=self._verbose)
+		metadata_table_community.read(community.file_path_metadata_table, column_names=True)
 		strain_selector = StrainSelector(
 			column_name_genome_id=self._column_name_genome_id,
 			column_name_otu=self._column_name_otu,
@@ -426,7 +428,7 @@ class CommunityDesign(PrepareStrains):
 			logfile=self._logfile, verbose=self._verbose, debug=self._debug
 			)
 		list_of_drawn_genome_id = strain_selector.get_drawn_genome_id(
-			metadata_table=metadata_table,
+			metadata_table=metadata_table_community,
 			number_of_strains=number_of_strains,
 			number_of_strains_per_otu=community.limit_per_otu
 			)
@@ -438,8 +440,8 @@ class CommunityDesign(PrepareStrains):
 			prefix=file_prefix,
 			index=community.id,
 			ext=extention)
-		metadata_new_file_path = os.path.join(directory_metadata, new_file_name)
-		metadata_table.write(
+		metadata_new_file_path = os.path.join(directory_out_metadata, new_file_name)
+		metadata_table_community.write(
 			metadata_new_file_path,
 			exclude=True,
 			value_list=list_of_drawn_genome_id,
@@ -453,8 +455,8 @@ class CommunityDesign(PrepareStrains):
 			community.file_path_genome_locations, list_of_drawn_genome_id)
 
 		# concatenate
-		metadata_table.reduce_rows_to_subset(list_of_drawn_genome_id, self._column_name_genome_id)
-		metadata_table_comby.concatenate(metadata_table, strict=False)
+		metadata_table_community.reduce_rows_to_subset(list_of_drawn_genome_id, self._column_name_genome_id)
+		metadata_table.concatenate(metadata_table_community, strict=False)
 
 		# validate correct format of files
 		self._logger.info("Validating raw sequence files!")
@@ -469,7 +471,7 @@ class CommunityDesign(PrepareStrains):
 		if community.simulate_strains:
 			genome_id_to_amounts = strain_simulation.get_genome_id_to_amounts(list_of_drawn_genome_id, genome_amounts)
 			strain_simulation.simulate_strains(
-				meta_table=metadata_table_comby,
+				meta_table=metadata_table,
 				genome_id_to_amounts=genome_id_to_amounts,
 				genome_id_to_file_path_genome=genome_id_to_path_map,
 				genome_id_to_file_path_gff=genome_id_to_file_path_gff)
@@ -499,52 +501,44 @@ class CommunityDesign(PrepareStrains):
 		# move and clean up files (removes sequence description)
 		genome_id_to_total_length = self.move_genome_files(
 			genome_id_to_path_map,
-			directory_output=directory_genomes,
-			sequence_min_length=min_length,
+			directory_output=directory_out_genomes,
+			sequence_min_length=min_sequence_length,
 			set_of_sequence_names=set_of_sequence_names)
 
 		# write distribution file
-		genome_id_to_distributions = self._get_genome_id_to_distributions(list_of_drawn_genome_id, list_of_distributions)
+		# genome_id_to_distributions = self._get_genome_id_to_distributions(list_of_drawn_genome_id, list_of_distributions)
+		assert len(list_of_drawn_genome_id) == len(list_of_distributions)
+		genome_id_to_distributions = dict(zip(list_of_drawn_genome_id, list_of_distributions))
+
 		genome_id_to_file_name = self._get_genome_id_to_file_name(genome_id_to_path_map)
 		self._write_distribution_files(
-			directory_output=directory_distributions,
+			directory_output=directory_out_distributions,
 			genome_id_to_total_length=genome_id_to_total_length,
-			genome_id_to_distributions=genome_id_to_distributions,
+			genome_id_to_abundance=genome_id_to_distributions,
 			genome_id_to_file_name=genome_id_to_file_name,
 			community_id=community.id)
 		return list_of_drawn_genome_id
 
 	@staticmethod
-	def _get_genome_id_to_distributions(list_of_drawn_genome_id, list_of_distributions):
-		"""
-
-		@param list_of_drawn_genome_id:
-		@type list_of_drawn_genome_id: list[str|unicode]
-		@param list_of_distributions:
-		@type list_of_distributions: list[list[float]]
-
-		@return:
-		@rtype : dict[str|unicode, list[float]]
-		"""
-		genome_id_to_distributions = {}
-		assert len(list_of_drawn_genome_id) == len(list_of_distributions)
-		for index in range(len(list_of_drawn_genome_id)):
-			genome_id_to_distributions[list_of_drawn_genome_id[index]] = list_of_distributions[index]
-		return genome_id_to_distributions
-
-	@staticmethod
 	def _get_genome_id_to_file_name(genome_id_to_path_map):
 		"""
+		Extract file names for reuse in new folder
 
-		@param genome_id_to_path_map:
+		@attention: Preserving original name might will cause issue if not unique
+
+		@param genome_id_to_path_map: Dictionary with file path by genome ids
 		@type genome_id_to_path_map: dict[str|unicode, str|unicode]
 
-		@return:
+		@return: Map of genome id to a filename
 		@rtype : dict[str|unicode, str|unicode]
 		"""
+		set_of_file_names = set()
 		genome_id_to_file_name = {}
 		for genome_id, file_path in genome_id_to_path_map.iteritems():
-			genome_id_to_file_name[genome_id] = os.path.basename(file_path)
+			filename = os.path.basename(file_path)
+			assert filename not in set_of_file_names, "Filename '{}' is not unique!".format(set_of_file_names)
+			set_of_file_names.add(filename)
+			genome_id_to_file_name[genome_id] = filename
 		return genome_id_to_file_name
 
 	#####################
@@ -553,74 +547,75 @@ class CommunityDesign(PrepareStrains):
 	#
 	#####################
 
-	def merge_communities(self, list_of_communities, directory_distributions, number_of_samples, metadata_table_all):
+	def merge_communities(self, list_of_communities, directory_out_distributions, number_of_samples, metadata_table):
 		"""
+		Combine distributions of communities and adjust them according to their ratio.
 
-		@param list_of_communities:
+		@param list_of_communities: List of community inputs
 		@type list_of_communities: list[Community]
-		@param directory_distributions:
-		@type directory_distributions: str | unicode
-		@param number_of_samples:
+		@param directory_out_distributions: Output directory where distribution files will be placed
+		@type directory_out_distributions: str | unicode
+		@param number_of_samples: Amount of samples to be simulated
 		@type number_of_samples: int | long
-		@param metadata_table_all:
-		@type metadata_table_all: MetadataTable
+		@param metadata_table: Will contain metadata of all (simulated) genomes/plasmids drawn
+		@type metadata_table: MetadataTable
 
-		@return:
+		@return: List of combined distribution file paths for each sample
 		@rtype: list[str|unicode]
 		"""
 		assert isinstance(list_of_communities, list)
 		for community in list_of_communities:
 			assert isinstance(community, Community)
-		assert isinstance(metadata_table_all, MetadataTable)
+		assert isinstance(metadata_table, MetadataTable)
 
 		# read communities and adapt to ratio
 		list_of_output_paths = []
 		for index_sample in range(number_of_samples):
 			communities = []
-			list_of_community_total_distribution = [0] * len(list_of_communities)
-			sample_total_distribution = 0
+			list_of_community_total_abundance = [0] * len(list_of_communities)
+			sample_total_abundance = 0
 
 			# create list of community files for one sample
 			list_of_file_paths = []
 			for index_community, c in enumerate(list_of_communities):
 				dist_file_name = os.path.join(
-					directory_distributions,
+					directory_out_distributions,
 					self._filename_distribution_comunity.format(
 						comunity_index=index_community, sample_index=index_sample))
 				list_of_file_paths.append(dist_file_name)
 
-			metadata_table = MetadataTable(logfile=self._logfile, verbose=self._verbose)
+			metadata_table_community = MetadataTable(logfile=self._logfile, verbose=self._verbose)
 			for index_community, file_path in enumerate(list_of_file_paths):
-				communities.append(metadata_table.parse_file(file_path, column_names=False))
+				communities.append(metadata_table_community.parse_file(file_path, column_names=False))
 				# communities_length.append(0)
 
 				genomes = set()
-				for genome_id, file_name, distribution, genome_length in communities[index_community]:
+				for genome_id, file_name, abundance, genome_length in communities[index_community]:
 					if genome_id in genomes:
-						# print genome_id, filename, distribution, genome_length
+						# print genome_id, filename, abundance, genome_length
 						raise ValueError("Genome id '{}' not unique".format(genome_id))
 					genomes.add(genome_id)
-					list_of_community_total_distribution[index_community] += float(distribution)  # * float(sequence_info[4])
-				sample_total_distribution += list_of_community_total_distribution[index_community]
+					list_of_community_total_abundance[index_community] += float(abundance)  # * float(sequence_info[4])
+				sample_total_abundance += list_of_community_total_abundance[index_community]
 				communities[index_community].close()
 
 			# out.append(read_communities[0][0])
 			list_of_community_factor = [0.0] * len(list_of_communities)
 			for index_community, c in enumerate(list_of_file_paths):
 				ratio = float(list_of_communities[index_community].ratio)
-				community_total_distribution = float(list_of_community_total_distribution[index_community])
-				current_proportion_in_sample = community_total_distribution / float(sample_total_distribution)
+				community_total_abundance = float(list_of_community_total_abundance[index_community])
+				current_proportion_in_sample = community_total_abundance / float(sample_total_abundance)
 				list_of_community_factor[index_community] = ratio / current_proportion_in_sample
 				# self.update_community(communities[index_community], factor)
 
 			# join communities
 			communities = []
 			for index_community, file_path in enumerate(list_of_file_paths):
-				communities.append(metadata_table.parse_file(file_path, column_names=False))
+				communities.append(metadata_table_community.parse_file(file_path, column_names=False))
 
 			# print_ratios(communities)
 			file_path_output = os.path.join(
-				directory_distributions, self._filename_distribution_comunity_joint.format(sample_index=index_sample))
+				directory_out_distributions, self._filename_distribution_comunity_joint.format(sample_index=index_sample))
 			with open(file_path_output, 'w') as stream_output:
 				self._write_joined_community(
 					communities,
@@ -636,22 +631,23 @@ class CommunityDesign(PrepareStrains):
 	@staticmethod
 	def _write_joined_community(communities, list_of_community_factor, stream_output):
 		"""
+		Stream out joined distribution for a sample
 
-		@param communities:
-		@type communities: generator[ dict[int|long|str|unicode, str|unicode] ]
-		@param list_of_community_factor:
+		@param communities: list of iterators over row cells from community abundance files
+		@type communities: list[generator]
+		@param list_of_community_factor: multiplication factor for each community to get right ratio
 		@type list_of_community_factor: list[float]
-		@param stream_output:
+		@param stream_output: joined distribution information output
 		@type stream_output: file | FileIO | StringIO | basestring
 		"""
 		line_format = "{gid}\t{filename}\t{distr}\t{length}\n"
 		for community_index, community in enumerate(communities):
 			factor = list_of_community_factor[community_index]
-			for genome_id, filename, distribution, genome_length in community:
+			for genome_id, filename, abundance, genome_length in community:
 				stream_output.write(line_format.format(
 					gid=genome_id,
 					filename=filename,
-					distr=float(distribution) * factor,
+					distr=float(abundance) * factor,
 					length=genome_length,
 				))
 			community.close()
