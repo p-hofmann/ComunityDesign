@@ -159,17 +159,17 @@ class TestMethodsCommunityDesign(DefaultSetUpCommunityDesign):
 			gauss_sigma=3,
 			verbose=False)
 
-		list_of_sequence_names = set()
+		set_of_sequence_names = set()
 		list_of_drawn_genome_id = self.test_object.design(
 			community,
 			number_of_samples=5,
-			metadata_table_comby=metadata_table_comby,
-			directory_distributions=self.directory_distributions,
-			directory_genomes=self.directory_genomes,
-			directory_metadata=self.directory_metadata,
-			directory_template=None,
-			list_of_sequence_names=list_of_sequence_names,
-			min_length=1)
+			metadata_table=metadata_table_comby,
+			directory_out_distributions=self.directory_distributions,
+			directory_out_genomes=self.directory_genomes,
+			directory_out_metadata=self.directory_metadata,
+			directory_in_template=None,
+			set_of_sequence_names=set_of_sequence_names,
+			min_sequence_length=1)
 		# print list_of_drawn_genome_id
 		self.assertListEqual(list_of_drawn_genome_id, expected_result)
 		self._success = True
@@ -217,37 +217,37 @@ class TestMethodsCommunityDesign(DefaultSetUpCommunityDesign):
 		list_of_drawn_genome_id = self.test_object.design(
 			community0,
 			number_of_samples=5,
-			metadata_table_comby=metadata_table_comby,
-			directory_distributions=self.directory_distributions,
-			directory_genomes=self.directory_genomes,
-			directory_metadata=self.directory_metadata,
-			directory_template=None,
-			list_of_sequence_names=list_of_sequence_names,
-			min_length=1)
+			metadata_table=metadata_table_comby,
+			directory_out_distributions=self.directory_distributions,
+			directory_out_genomes=self.directory_genomes,
+			directory_out_metadata=self.directory_metadata,
+			directory_in_template=None,
+			set_of_sequence_names=list_of_sequence_names,
+			min_sequence_length=1)
 
 		list_of_drawn_genome_id.extend(self.test_object.design(
 			community1,
 			number_of_samples=5,
-			metadata_table_comby=metadata_table_comby,
-			directory_distributions=self.directory_distributions,
-			directory_genomes=self.directory_genomes,
-			directory_metadata=self.directory_metadata,
-			directory_template=None,
-			list_of_sequence_names=list_of_sequence_names,
-			min_length=1))
+			metadata_table=metadata_table_comby,
+			directory_out_distributions=self.directory_distributions,
+			directory_out_genomes=self.directory_genomes,
+			directory_out_metadata=self.directory_metadata,
+			directory_in_template=None,
+			set_of_sequence_names=list_of_sequence_names,
+			min_sequence_length=1))
 
 		list_of_communities = [community0, community1]
 		list_of_output_paths = self.test_object.merge_communities(
 			list_of_communities,
-			directory_distributions=self.directory_distributions,
+			directory_out_distributions=self.directory_distributions,
 			number_of_samples=number_of_samples,
-			metadata_table_all=metadata_table_comby)
+			metadata_table=metadata_table_comby)
 		# print list_of_drawn_genome_id
 		self.assertEqual(len(list_of_output_paths), number_of_samples)
 		taxonomy = NcbiTaxonomy(taxonomy_directory=self.taxonomy_directory, verbose=False)
 		tp = TaxonomicProfile(taxonomy, logfile=None, verbose=False, debug=False)
 		tp.write_taxonomic_profile_from_abundance_files(
-			metadata_table_all=metadata_table_comby,
+			metadata_table=metadata_table_comby,
 			list_of_file_paths=list_of_output_paths,
 			directory_output=self.dir_output
 		)
