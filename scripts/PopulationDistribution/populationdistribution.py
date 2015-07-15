@@ -53,7 +53,7 @@ class PopulationDistribution(Validator):
 		return PopulationDistribution._modi
 
 	@staticmethod
-	def get_initial_list(size_of_population, number_of_samples):
+	def _get_initial_list(size_of_population, number_of_samples):
 		"""
 			Get initial list with zero initialized
 
@@ -72,7 +72,7 @@ class PopulationDistribution(Validator):
 		return [[0.0] * number_of_samples for _ in xrange(size_of_population)]
 
 	@staticmethod
-	def add_initial_log_distribution(list_population, mu, sigma):
+	def _add_initial_log_distribution(list_population, mu, sigma):
 		"""
 			Adding a initial distribution
 
@@ -94,7 +94,7 @@ class PopulationDistribution(Validator):
 		for index in xrange(len(list_population)):
 			list_population[index][0] = random.lognormvariate(mu, sigma)
 
-	def add_replicates(self, list_population, mu, sigma):
+	def _add_replicates(self, list_population, mu, sigma):
 		"""
 			Adding gaussian noise to the first drawn abundances
 
@@ -118,7 +118,7 @@ class PopulationDistribution(Validator):
 			for index_i in xrange(len(list_population[index_p])-1):
 				list_population[index_p][index_i+1] = self.lt_zero(initial_log_distribution + random.gauss(mu, sigma))
 
-	def add_timeseries_gauss(self, list_population, mu, sigma):
+	def _add_timeseries_gauss(self, list_population, mu, sigma):
 		"""
 			Adding gaussian noise sequentially to the previous sample
 
@@ -146,7 +146,7 @@ class PopulationDistribution(Validator):
 					list_population[index_p][index_i+1] = 0.0
 
 	@staticmethod
-	def add_timeseries_lognorm(list_population, mu, sigma):
+	def _add_timeseries_lognorm(list_population, mu, sigma):
 		"""
 			each abundance profile is produced by
 			- draw new value from lognorm distribution
@@ -172,7 +172,7 @@ class PopulationDistribution(Validator):
 				list_population[index_p][index_i+1] = (list_population[index_p][index_i] + random.lognormvariate(mu, sigma))/2
 
 	@staticmethod
-	def add_differential(list_population, mu, sigma):
+	def _add_differential(list_population, mu, sigma):
 		"""
 			Abundance is drawn independently from previous lognorm distributions
 
@@ -280,18 +280,18 @@ class PopulationDistribution(Validator):
 			gauss_sigma = 3 * log_sigma
 		view_distribution = self._verbose
 
-		list_population = self.get_initial_list(size_of_population, number_of_samples)
+		list_population = self._get_initial_list(size_of_population, number_of_samples)
 		while True:
-			self.add_initial_log_distribution(list_population, log_mu, log_sigma)
+			self._add_initial_log_distribution(list_population, log_mu, log_sigma)
 
 			if modus == 'replicates':
-				self.add_replicates(list_population, gauss_mu, gauss_sigma)
+				self._add_replicates(list_population, gauss_mu, gauss_sigma)
 			elif modus == 'timeseries_normal':
-				self.add_timeseries_gauss(list_population, gauss_mu, gauss_sigma)
+				self._add_timeseries_gauss(list_population, gauss_mu, gauss_sigma)
 			elif modus == 'timeseries_lognormal':
-				self.add_timeseries_lognorm(list_population, log_mu, log_sigma)
+				self._add_timeseries_lognorm(list_population, log_mu, log_sigma)
 			elif modus == 'differential':
-				self.add_differential(list_population, log_mu, log_sigma)
+				self._add_differential(list_population, log_mu, log_sigma)
 
 			if not view_distribution:
 				break
@@ -299,7 +299,28 @@ class PopulationDistribution(Validator):
 			self.display_figures(list_population)
 			if self.get_confirmation(message="Use distribution? [y/n]"):
 				break
+		self.random_distribution_to_relative_abundance(list_population)
 		return list_population
+
+	@staticmethod
+	def random_distribution_to_relative_abundance(list_population, precision=10):
+		"""
+			Replace random distributions with relative abundances
+
+			@attention: limited to first 20
+
+			@param list_population: Main list for all distributions
+			@type list_population: list[list[float]]
+			@param precision: Precision, numbers after decimal point
+			@type precision: int
+		"""
+		number_of_samples = len(list_population[0])
+		for index_i in xrange(number_of_samples):
+			total_abundance = 0.0
+			for index_p in xrange(len(list_population)):
+				total_abundance += list_population[index_p][index_i]
+			for index_p in xrange(len(list_population)):
+				list_population[index_p][index_i] = round(list_population[index_p][index_i] / float(total_abundance), precision)
 
 	@staticmethod
 	def lt_zero(value):
