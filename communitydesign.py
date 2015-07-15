@@ -443,17 +443,20 @@ class CommunityDesign(GenomePreparation):
 		@param stream_output: joined distribution information output
 		@type stream_output: file | FileIO | StringIO | basestring
 		"""
-		line_format = "{gid}\t{filename}\t{distr}\t{length}\n"
+		distribution = {}
+		total_abundance = 0.0
+		line_format = "{gid}\t{abundance}\n"
 		for community_index, community in enumerate(communities):
 			factor = list_of_community_factor[community_index]
-			for genome_id, filename, abundance, genome_length in community:
-				stream_output.write(line_format.format(
-					gid=genome_id,
-					filename=filename,
-					distr=float(abundance) * factor,
-					length=genome_length,
-				))
+			for genome_id, abundance in community:
+				distribution[genome_id] = float(abundance) * factor
+				total_abundance += distribution[genome_id]
 			community.close()
+		for genome_id, abundance in distribution.iteritems():
+			stream_output.write(line_format.format(
+				gid=genome_id,
+				abundance=float(abundance) / total_abundance
+			))
 
 	def design_samples(
 		self, list_of_communities, number_of_samples, metadata_table,
@@ -488,5 +491,6 @@ class CommunityDesign(GenomePreparation):
 				community, number_of_samples, metadata_table,
 				directory_out_distributions, directory_out_metadata, directory_in_template=directory_in_template)
 			merged_genome_id_to_path_map.update(genome_id_to_path_map)
-		list_of_file_paths_distributions = self.merge_communities(list_of_communities, directory_out_distributions, number_of_samples, metadata_table)
+		list_of_file_paths_distributions = self.merge_communities(
+			list_of_communities, directory_out_distributions, number_of_samples, metadata_table)
 		return merged_genome_id_to_path_map, list_of_file_paths_distributions
