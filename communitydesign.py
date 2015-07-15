@@ -187,8 +187,8 @@ class CommunityDesign(GenomePreparation):
 		@param directory_in_template: contains template data for strain simulation
 		@type directory_in_template: str | unicode
 
-		@return: List of drawn genome ids
-		@rtype: list[str|unicode]
+		@return: Dictionary with drawn genome ids as key and file paths as value
+		@rtype: dict[str|unicode, str|unicode]
 		"""
 		assert isinstance(community, Community)
 		assert isinstance(metadata_table, MetadataTable)
