@@ -168,11 +168,11 @@ class CommunityDesign(GenomePreparation):
 						id=genome_id,
 						distr=distribution))
 
-	def design(
+	def design_community(
 		self, community, number_of_samples, metadata_table,
 		directory_out_distributions, directory_out_metadata, directory_in_template=None):
 		"""
-		Design artificial communities, of a specific design, for a given number of samples
+		Design artificial community, of a specific design, with different distributions for each sample
 
 		@param community: Input data for the creation of a community
 		@type community: Community
@@ -375,7 +375,6 @@ class CommunityDesign(GenomePreparation):
 		# read communities and adapt to ratio
 		list_of_output_paths = []
 		for index_sample in range(number_of_samples):
-			communities = []
 			list_of_community_total_abundance = [0] * len(list_of_communities)
 			sample_total_abundance = 0
 
@@ -390,18 +389,18 @@ class CommunityDesign(GenomePreparation):
 
 			metadata_table_community = MetadataTable(logfile=self._logfile, verbose=self._verbose)
 			for index_community, file_path in enumerate(list_of_file_paths):
-				communities.append(metadata_table_community.parse_file(file_path, column_names=False))
+				community_distribution = metadata_table_community.parse_file(file_path, column_names=False)
 				# communities_length.append(0)
 
 				genomes = set()
-				for genome_id, file_name, abundance, genome_length in communities[index_community]:
+				for genome_id, abundance in community_distribution:
 					if genome_id in genomes:
 						# print genome_id, filename, abundance, genome_length
 						raise ValueError("Genome id '{}' not unique".format(genome_id))
 					genomes.add(genome_id)
 					list_of_community_total_abundance[index_community] += float(abundance)  # * float(sequence_info[4])
 				sample_total_abundance += list_of_community_total_abundance[index_community]
-				communities[index_community].close()
+				community_distribution.close()
 
 			# out.append(read_communities[0][0])
 			list_of_community_factor = [0.0] * len(list_of_communities)
@@ -455,3 +454,39 @@ class CommunityDesign(GenomePreparation):
 					length=genome_length,
 				))
 			community.close()
+
+	def design_samples(
+		self, list_of_communities, number_of_samples, metadata_table,
+		directory_out_distributions, directory_out_metadata, directory_in_template=None):
+		"""
+		Design artificial community, of a specific design, with different distributions for each sample
+
+		@param list_of_communities: List of input data for the creation of a community
+		@type list_of_communities: list[Community]
+		@param number_of_samples: Amount of samples to be simulated
+		@type number_of_samples: int
+		@param metadata_table: Will contain metadata of all (simulated) genomes/plasmids drawn
+		@type metadata_table: MetadataTable
+		@param directory_out_distributions: Output directory where distribution files will be placed
+		@type directory_out_distributions: str | unicode
+		@param directory_out_metadata: Metadata tables of separated by chosen and not chosen genomes are written to here
+		@type directory_out_metadata: str | unicode
+		@param directory_in_template: contains template data for strain simulation
+		@type directory_in_template: str | unicode
+
+		@return: Dictionary with drawn genome ids as key and file paths as value
+		@rtype: tuple[dict[str|unicode, str|unicode], list[str|unicode]]
+		"""
+		assert isinstance(list_of_communities, list)
+		for community in list_of_communities:
+			assert isinstance(community, Community)
+		assert isinstance(metadata_table, MetadataTable)
+
+		merged_genome_id_to_path_map = {}
+		for community in list_of_communities:
+			genome_id_to_path_map = self.design_community(
+				community, number_of_samples, metadata_table,
+				directory_out_distributions, directory_out_metadata, directory_in_template=directory_in_template)
+			merged_genome_id_to_path_map.update(genome_id_to_path_map)
+		list_of_file_paths_distributions = self.merge_communities(list_of_communities, directory_out_distributions, number_of_samples, metadata_table)
+		return merged_genome_id_to_path_map, list_of_file_paths_distributions
