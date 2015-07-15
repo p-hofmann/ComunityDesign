@@ -6,7 +6,8 @@ import unittest
 import os
 import sys
 import shutil
-from communitydesign import PrepareStrains, CommunityDesign, Community
+from communitydesign import CommunityDesign, Community
+from scripts.GenomePreparation.genomepreparation import GenomePreparation
 from taxonomicprofile import TaxonomicProfile
 from scripts.MetaDataTable.metadatatable import MetadataTable
 from scripts.NcbiTaxonomy.ncbitaxonomy import NcbiTaxonomy
@@ -39,7 +40,7 @@ class DefaultSetUpPrepareStrains(unittest.TestCase):
 
 		logfile = os.path.join(self.dir_output, self.log_filename)
 		self.file_stream = open(logfile, 'a')
-		self.test_object = PrepareStrains(
+		self.test_object = GenomePreparation(
 			logfile=self.file_stream,
 			verbose=False,
 			debug=True)
