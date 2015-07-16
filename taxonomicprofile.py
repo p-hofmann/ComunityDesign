@@ -76,10 +76,10 @@ class TaxonomicProfile(Validator):
 		# for community in community_abundance:
 		# 	all_communities += community
 
-		for genome_id, file_name, distribution, total_length in community_abundance:
+		for genome_id, abundance in community_abundance:
 			if genome_id in genome_abundance:
 				raise IOError("genome id '{}' is not unique!".format(genome_id))
-			genome_abundance[genome_id] = float(distribution)*float(total_length)
+			genome_abundance[genome_id] = float(abundance)  # *float(total_length)
 			total_abundance += genome_abundance[genome_id]
 
 		for key, value in genome_abundance.items():
