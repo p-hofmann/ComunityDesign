@@ -127,6 +127,8 @@ class DefaultSetUpCommunityDesign(unittest.TestCase):
 class TestMethodsCommunityDesign(DefaultSetUpCommunityDesign):
 
 	def test_get_drawn_genome_id(self):
+		#self._success = True
+		#self.skipTest("aa")
 		expected_result = [
 			'simulated_443255.1.Taxon008',
 			'simulated_1244532.1.Taxon029',
@@ -160,22 +162,19 @@ class TestMethodsCommunityDesign(DefaultSetUpCommunityDesign):
 			gauss_sigma=3,
 			verbose=False)
 
-		set_of_sequence_names = set()
-		list_of_drawn_genome_id = self.test_object.design(
-			community,
+		file_path_distributions = os.path.join(self.directory_distributions, "distr_com_out.txt")
+		genome_id_to_path_map = self.test_object.design_community(
+			file_path_distributions,
+			community=community,
 			number_of_samples=5,
 			metadata_table=metadata_table_comby,
-			directory_out_distributions=self.directory_distributions,
-			directory_out_genomes=self.directory_genomes,
 			directory_out_metadata=self.directory_metadata,
-			directory_in_template=None,
-			set_of_sequence_names=set_of_sequence_names,
-			min_sequence_length=1)
+			directory_in_template=None)
 		# print list_of_drawn_genome_id
-		self.assertListEqual(list_of_drawn_genome_id, expected_result)
+		self.assertListEqual(genome_id_to_path_map.keys(), expected_result)
 		self._success = True
 
-	def test_merge_communities(self):
+	def test_design_samples(self):
 		metadata_table_comby = MetadataTable(verbose=False)
 		file_path_metadata_table = os.path.join(self.dir_input, self.filename_metadata)
 		file_path_metadata_table2 = os.path.join(self.dir_input, self.filename_metadata2)
@@ -214,37 +213,46 @@ class TestMethodsCommunityDesign(DefaultSetUpCommunityDesign):
 			verbose=False)
 
 		number_of_samples = 5
-		list_of_sequence_names = set()
-		list_of_drawn_genome_id = self.test_object.design(
-			community0,
-			number_of_samples=5,
-			metadata_table=metadata_table_comby,
-			directory_out_distributions=self.directory_distributions,
-			directory_out_genomes=self.directory_genomes,
-			directory_out_metadata=self.directory_metadata,
-			directory_in_template=None,
-			set_of_sequence_names=list_of_sequence_names,
-			min_sequence_length=1)
+		list_of_output_paths = [
+			os.path.join(self.directory_distributions, "distr_com_out0.txt"),
+			os.path.join(self.directory_distributions, "distr_com_out1.txt"),
+			os.path.join(self.directory_distributions, "distr_com_out2.txt"),
+			os.path.join(self.directory_distributions, "distr_com_out3.txt"),
+			os.path.join(self.directory_distributions, "distr_com_out4.txt")
+			]
 
-		list_of_drawn_genome_id.extend(self.test_object.design(
-			community1,
-			number_of_samples=5,
+		list_of_drawn_genome_id = []
+		genome_id_to_path_map = self.test_object.design_community(
+			list_of_output_paths[0],
+			community=community0,
+			number_of_samples=number_of_samples,
 			metadata_table=metadata_table_comby,
-			directory_out_distributions=self.directory_distributions,
-			directory_out_genomes=self.directory_genomes,
 			directory_out_metadata=self.directory_metadata,
-			directory_in_template=None,
-			set_of_sequence_names=list_of_sequence_names,
-			min_sequence_length=1))
+			directory_in_template=None)
+		list_of_drawn_genome_id.extend(genome_id_to_path_map.keys())
+
+		genome_id_to_path_map = self.test_object.design_community(
+			list_of_output_paths[1],
+			community=community1,
+			number_of_samples=number_of_samples,
+			metadata_table=metadata_table_comby,
+			directory_out_metadata=self.directory_metadata,
+			directory_in_template=None)
+		list_of_drawn_genome_id.extend(genome_id_to_path_map.keys())
 
 		list_of_communities = [community0, community1]
-		list_of_output_paths = self.test_object.merge_communities(
-			list_of_communities,
-			directory_out_distributions=self.directory_distributions,
-			number_of_samples=number_of_samples,
-			metadata_table=metadata_table_comby)
+		metadata_table_comby = MetadataTable(verbose=False)
+		merged_genome_id_to_path_map = self.test_object.design_samples(
+			list_of_communities=list_of_communities,
+			metadata_table=metadata_table_comby,
+			list_of_file_paths_distribution=list_of_output_paths,
+			directory_out_metadata=self.directory_metadata,
+			directory_in_template=None)
+
 		# print list_of_drawn_genome_id
 		self.assertEqual(len(list_of_output_paths), number_of_samples)
+		for file_path in list_of_output_paths:
+			self.assertTrue(os.path.isfile(file_path))
 		taxonomy = NcbiTaxonomy(taxonomy_directory=self.taxonomy_directory, verbose=False)
 		tp = TaxonomicProfile(taxonomy, logfile=None, verbose=False, debug=False)
 		tp.write_taxonomic_profile_from_abundance_files(
