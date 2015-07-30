@@ -92,7 +92,7 @@ class CommunityDesign(GenomePreparation):
 	"""
 	_label = "CommunityDesign"
 
-	_filename_distribution_comunity = "distribution_{comunity_index}_{sample_index}.txt"
+	# _filename_distribution_comunity = "distribution_{comunity_index}_{sample_index}.txt"
 	_filename_distribution_comunity_joint = "distribution_{sample_index}.txt"
 
 	# TODO: plasmids within genome files
@@ -143,6 +143,10 @@ class CommunityDesign(GenomePreparation):
 			tmp_dir = tempfile.gettempdir()
 		self._tmp_dir = tmp_dir
 		assert self.validate_dir(self._tmp_dir)
+
+	def get_distribution_file_paths(self, directory, number_of_samples):
+		file_path = os.path.join(directory, self._filename_distribution_comunity_joint)
+		return [file_path.format(sample_index=sample_index) for sample_index in range(number_of_samples)]
 
 	@staticmethod
 	def _write_distribution_file(stream_out, genome_id_to_abundance):
