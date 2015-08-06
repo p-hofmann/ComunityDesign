@@ -1,5 +1,5 @@
 __author__ = 'hofmann'
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 import os
 import random
@@ -144,8 +144,20 @@ class CommunityDesign(GenomePreparation):
 		self._tmp_dir = tmp_dir
 		assert self.validate_dir(self._tmp_dir)
 
-	def get_distribution_file_paths(self, directory, number_of_samples):
-		file_path = os.path.join(directory, self._filename_distribution_comunity_joint)
+	@staticmethod
+	def get_distribution_file_paths(directory, number_of_samples):
+		"""
+		Generate directory paths for each sample
+
+		@param directory: Output stream
+		@type directory: str | unicode
+		@param number_of_samples: Number of samples
+		@type number_of_samples: int | long
+
+		@return: list of directories
+		@rtype: list[str | unicode]
+		"""
+		file_path = os.path.join(directory, CommunityDesign._filename_distribution_comunity_joint)
 		return [file_path.format(sample_index=sample_index) for sample_index in range(number_of_samples)]
 
 	@staticmethod
