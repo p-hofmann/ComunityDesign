@@ -1,4 +1,5 @@
 __author__ = 'hofmann'
+__version__ = '0.0.2'
 
 import os
 from scripts.MetaDataTable.metadatatable import MetadataTable

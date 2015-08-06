@@ -2,6 +2,7 @@
 
 __author__ = 'hofmann'
 __original_author__ = 'eik.dahms@uni-duesseldorf.de'
+__version__ = '0.0.2'
 
 import random
 from scripts.loggingwrapper import DefaultLogging
@@ -244,7 +245,7 @@ class NoveltyCategory(object):
 		"""
 		assert isinstance(total, int)
 		assert isinstance(limit_per_otu, int)
-		assert total <= self.get_strain_amount(), "{} < {}, can not draw more than available!".format(total, self.get_strain_amount())
+		assert total <= self.get_strain_amount()
 		assert limit_per_otu > 0
 		drawn_strain = []
 		overhead = []

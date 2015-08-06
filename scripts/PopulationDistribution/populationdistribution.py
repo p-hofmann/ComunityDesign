@@ -1,5 +1,6 @@
 __author__ = 'hofmann'
 __original_author__ = 'eik.dahms@uni-duesseldorf.de'
+__version__ = '0.0.2'
 
 import random
 import matplotlib.pyplot as plt

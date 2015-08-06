@@ -1,5 +1,5 @@
 __author__ = 'hofmann'
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 import sys
 import io
@@ -221,7 +221,7 @@ class LoggingWrapper(object):
 		err_handler.setLevel(level)
 		self._logger.addHandler(err_handler)
 
-	def set_log_file(self, log_file, mode='w', level=logging.INFO):
+	def set_log_file(self, log_file, mode='a', level=logging.INFO):
 		"""
 			Add a stream where messages are outputted to.
 
@@ -283,7 +283,7 @@ class DefaultLogging(object):
 		assert isinstance(debug, bool)
 		self._logger = LoggingWrapper(self._label, verbose=verbose)
 		if logfile:
-			self._logger.set_log_file(logfile)
+			self._logger.set_log_file(logfile, mode='a')
 
 		self._debug = debug
 		if debug:

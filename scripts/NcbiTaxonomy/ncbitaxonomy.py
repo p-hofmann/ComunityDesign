@@ -1,13 +1,14 @@
 # original from Dmitrij Turaev
 
 __author__ = 'hofmann'
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 
 
 import os
 import time
 from taxonomynode import TaxonomyNode
 from scripts.Validator.validator import Validator
+
 
 class NcbiTaxonomy(Validator):
 	"""Loading NCBI from SQL dump into dictionary for fast processing"""
@@ -63,18 +64,6 @@ class NcbiTaxonomy(Validator):
 
 		end = time.time()
 		self._logger.info("Done ({}s)".format(round(end - start), 1))
-
-	def __exit__(self, type, value, traceback):
-		self._close()
-
-	def __enter__(self):
-		return self
-
-	def __del__(self):
-		self._close()
-
-	def _close(self):
-		self._logger = None
 
 	def get_updated_taxid(self, taxid):
 		"""

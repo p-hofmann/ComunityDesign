@@ -2,6 +2,7 @@
 
 __author__ = 'hofmann'
 __original_author__ = "Aaron Daring"
+__version__ = '0.0.2'
 
 
 from scripts.parallel import TaskCmd, runCmdParallel, reportFailedCmd
@@ -18,9 +19,6 @@ from Bio import Phylo
 
 
 class GenomeOrganizer(Validator):
-
-	_label = "GenomeOrganizer"
-
 	def get_genome_amounts(self, probability, max_genome_amount, num_real_genomes=None, silent=True):
 		"""
 		Get amounts of genomes by original genome
@@ -302,7 +300,7 @@ class StrainSimulationWrapper(GenomeOrganizer):
 
 		if seed is not None:
 			random.seed(seed)
-			np_random.seed(abs(hash(seed)))
+			np_random.seed(hash(seed))
 
 		self._seed = random.randint(1000000, sys.maxsize)
 
@@ -359,7 +357,6 @@ class StrainSimulationWrapper(GenomeOrganizer):
 			log=os.path.join(directory_strains, os.path.basename(filepath_genome) + ".sim.log")
 		)
 		self._seed += 1
-		# print "\n", cmd, "\n"
 		return cmd
 
 	def _prepare_simulation_subfolder(self, directory_strains):
@@ -424,10 +421,10 @@ class StrainSimulationWrapper(GenomeOrganizer):
 		assert isinstance(genome_id_to_file_path_genome, dict)
 		assert genome_id_to_file_path_gff is None or isinstance(genome_id_to_file_path_gff, dict)
 		for file_path in genome_id_to_file_path_genome.values():
-			assert self.validate_file(file_path)
+			self.validate_file(file_path)
 		if genome_id_to_file_path_gff is not None:
 			for file_path in genome_id_to_file_path_gff.values():
-				assert self.validate_file(file_path)
+				self.validate_file(file_path)
 		self._simulate_strains(genome_id_to_amounts, genome_id_to_file_path_genome, genome_id_to_file_path_gff)
 		self._pick_random_strains(meta_table, genome_id_to_amounts, genome_id_to_file_path_genome)
 

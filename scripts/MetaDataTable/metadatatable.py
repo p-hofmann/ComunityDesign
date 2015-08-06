@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 __author__ = 'hofmann'
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 import io
 import StringIO
@@ -29,7 +29,7 @@ class MetadataTable(Compress):
 			@return: None
 			@rtype: None
 		"""
-		assert logfile is None or isinstance(logfile, basestring) or self._is_stream(logfile)
+		assert logfile is None or isinstance(logfile, basestring) or self.is_stream(logfile)
 		assert isinstance(separator, basestring), "separator must be string"
 		assert isinstance(verbose, bool), "verbose must be true or false"
 		super(MetadataTable, self).__init__(logfile=logfile, verbose=verbose)
@@ -64,7 +64,7 @@ class MetadataTable(Compress):
 			assert self._has_unique_columns(list_of_column_names), "Column names must be unique!"
 			return list_of_column_names
 
-	def parse_file(self, file_path, separator=None, column_names=False, comment_line=None):
+	def parse_file(self, file_path, separator=None, column_names=False, comment_line=None, as_list=True):
 		"""
 			Reading comma or tab separated values from a file
 
@@ -76,13 +76,15 @@ class MetadataTable(Compress):
 			@type column_names: bool
 			@param comment_line: character or list of character indication comment lines
 			@type comment_line: str | unicode | list[str|unicode]
+			@param as_list: If true lists are returned, else dicts.
+			@param as_list: bool
 
 			@return: Generator of dictionary representing rows
 			@rtype: generator[ dict[int|long|str|unicode, str|unicode] ]
 			#
 		"""
 		with self.open(file_path) as file_handler:
-			for row in self.parse_stream(file_handler, separator, column_names, comment_line):
+			for row in self.parse_stream(file_handler, separator, column_names, comment_line, as_list):
 				yield row
 
 	def parse_stream(self, stream_input, separator=None, column_names=False, comment_line=None, as_list=True):
@@ -112,7 +114,7 @@ class MetadataTable(Compress):
 		if separator is None:
 			separator = self._separator
 
-		assert self._is_stream(stream_input)
+		assert self.is_stream(stream_input)
 		assert isinstance(separator, basestring)
 		assert isinstance(comment_line, list)
 		assert isinstance(column_names, bool)

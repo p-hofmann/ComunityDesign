@@ -1,4 +1,5 @@
-__author__ = 'hofmann'
+__author__ = 'peter hofmann'
+__version__ = '0.0.2'
 
 
 import os
@@ -16,6 +17,33 @@ from scripts.MetaDataTable.metadatatable import MetadataTable
 
 class GenomePreparation(SequenceValidator):
 	_label = "GenomePreparation"
+
+	_filename_seq_map = "sequence_id_map.txt"
+
+	def write_genome_id_to_path_map(self, genome_id_to_path_map, file_path_output):
+		"""
+		Write mapping of genome id to genome file path to a file.
+
+		@param file_path_output: File path
+		@type file_path_output: file | FileIO | StringIO
+		@param genome_id_to_path_map:
+		@type genome_id_to_path_map: dict[str|unicode, str|unicode]
+		"""
+		with open(file_path_output, 'w') as stream_out:
+			self._stream_genome_id_to_path_map(stream_out, genome_id_to_path_map)
+
+	def _stream_genome_id_to_path_map(self, stream_out, genome_id_to_path_map):
+		"""
+		Write mapping of genome id to genome file path to a stream.
+
+		@param stream_out: Stream like object
+		@type stream_out: file | FileIO | StringIO
+		@param genome_id_to_path_map:
+		@type genome_id_to_path_map: dict[str|unicode, str|unicode]
+		"""
+		assert self.is_stream(stream_out)
+		for genome_id, file_path in genome_id_to_path_map.iteritems():
+			stream_out.write("{}\t{}\n".format(genome_id, file_path))
 
 	def _get_genome_id_to_path_map(self, file_path_of_file_mapping_genome_id_to_paths, list_of_drawn_genome_id):
 		"""
@@ -36,7 +64,8 @@ class GenomePreparation(SequenceValidator):
 		return {genome_id: genome_id_to_path_map[genome_id] for genome_id in list_of_drawn_genome_id}
 
 	def _move_genome_file(
-		self, file_path_input, file_path_output, sequence_min_length=0, set_of_sequence_names=None, file_format="fasta"):
+		self, file_path_input, file_path_output,
+		stream_map, genome_id, sequence_min_length=1, set_of_sequence_names=None, file_format="fasta"):
 		"""
 		Move genomes into project folder, cleaning it up in the process.
 		Makes sure sequence ids are unique and descriptions/comments are removed
@@ -55,8 +84,6 @@ class GenomePreparation(SequenceValidator):
 		@param file_format: 'fasta' format by default.
 		@type file_format: str | unicode
 
-		@return: Total length of all sequences
-		@rtype: int | long
 		@raise Exception:
 		"""
 		assert self.validate_file(file_path_input)
@@ -67,22 +94,25 @@ class GenomePreparation(SequenceValidator):
 			set_of_sequence_names = []
 		with open(file_path_input, 'r') as stream_input, open(file_path_output, 'w') as stream_output:
 			total_base_pairs = self._cleanup_and_filter_sequences(
-				stream_input, stream_output, sequence_min_length, set_of_sequence_names, file_format)
+				stream_input, stream_output, stream_map, genome_id, sequence_min_length, set_of_sequence_names, file_format)
 		if total_base_pairs == 0:
 			msg = "No valid sequences in '{}'".format(stream_input.name)
 			self._logger.error(msg)
 			raise Exception(msg)
-		# return total_base_pairs
 
 	def _cleanup_and_filter_sequences(
-		self, stream_input, stream_output, sequence_min_length, set_of_sequence_names, file_format="fasta"):
+		self, stream_input, stream_output, stream_map,
+		genome_id, sequence_min_length, set_of_sequence_names, file_format="fasta"):
 		"""
+		Rename ids that are not unique and remove sequences that are shorter than a given minimum
 
 		@attention file_format: Anything but 'fasta' is not supported, yet
 
 		@param stream_input: input stream of sequence file
 		@type stream_input: file | FileIO | StringIO
 		@param stream_output: Output stream
+		@type stream_output: file | FileIO | StringIO
+		@param stream_output: Output stream mapping
 		@type stream_output: file | FileIO | StringIO
 		@param sequence_min_length: Minimum length of sequences
 		@type sequence_min_length: int | long
@@ -103,7 +133,9 @@ class GenomePreparation(SequenceValidator):
 					os.path.basename(stream_input.name), seq_record.id, len(seq_record.seq)))
 				continue
 			if seq_record.id in set_of_sequence_names:
-				seq_record.id = self._get_new_name(seq_record.id, set_of_sequence_names)
+				new_id = self._get_new_name(seq_record.id, set_of_sequence_names)
+				stream_map.write("{}\t{}\t{}\n".format(genome_id, seq_record.id, new_id))
+				seq_record.id = new_id
 			set_of_sequence_names.add(seq_record.id)
 			# file_handler.write(">{}\n".format(sequence_id))
 			# file_handler.writelines("{}\n".format(seq_record.seq))
@@ -111,8 +143,41 @@ class GenomePreparation(SequenceValidator):
 			total_base_pairs += len(seq_record.seq)
 		return total_base_pairs
 
+	def _stream_sequences_of_min_length(
+		self, stream_input, stream_output, sequence_min_length, file_format="fasta"):
+		"""
+		Stream sequences of a minimum length
+
+		@attention file_format: Anything but 'fasta' is not supported, yet
+
+		@param stream_input: input stream of sequence file
+		@type stream_input: file | FileIO | StringIO
+		@param stream_output: Output stream
+		@type stream_output: file | FileIO | StringIO
+		@param stream_output: Output stream mapping
+		@type stream_output: file | FileIO | StringIO
+		@param sequence_min_length: Minimum length of sequences
+		@type sequence_min_length: int | long
+		@param file_format: 'fasta' format by default.
+		@type file_format: str | unicode
+
+		@return: Total length of all sequences (base pairs)
+		@rtype: int | long
+		"""
+		total_base_pairs = 0
+		for seq_record in SeqIO.parse(stream_input, file_format):
+			# remove description, else art illumina messes up sam format
+			seq_record.description = ''
+			if len(seq_record.seq) < sequence_min_length:
+				self._logger.debug("'{}', Removing short sequence '{}', length: {}".format(
+					os.path.basename(stream_input.name), seq_record.id, len(seq_record.seq)))
+				continue
+			stream_output.write(seq_record.format(file_format))
+			total_base_pairs += len(seq_record.seq)
+		return total_base_pairs
+
 	def move_genome_files(
-		self, genome_id_to_path_map, directory_output, sequence_min_length, set_of_sequence_names=None):
+		self, genome_id_to_path_map, directory_output, sequence_min_length=0, set_of_sequence_names=None):
 		"""
 		Move and clean up a list of genomes
 
@@ -124,21 +189,19 @@ class GenomePreparation(SequenceValidator):
 		@type sequence_min_length: int | long
 		@param set_of_sequence_names: Set of all previously used sequence names, making sure all will be unique
 		@type set_of_sequence_names: set[str|unicode]
-
-		@return:
-		@rtype: dict[str|unicode, int|long]
 		"""
+		directory_output = self.get_full_path(directory_output)
 		assert isinstance(genome_id_to_path_map, dict)
 		if set_of_sequence_names is None:
 			set_of_sequence_names = set()
-		genome_id_to_total_length = {}
-		for genome_id, genome_file_path in genome_id_to_path_map.iteritems():
-			file_name = os.path.basename(genome_file_path)
-			new_genome_file_path = os.path.join(directory_output, file_name)
-			total_length = self._move_genome_file(
-				genome_file_path, new_genome_file_path, sequence_min_length, set_of_sequence_names)
-			genome_id_to_total_length[genome_id] = total_length
-		return genome_id_to_total_length
+		file_path_sequence_map = os.path.join(directory_output, self._filename_seq_map)
+		with open(file_path_sequence_map, 'w') as stream_map:
+			for genome_id, genome_file_path in genome_id_to_path_map.iteritems():
+				file_name = os.path.basename(genome_file_path)
+				new_genome_file_path = os.path.join(directory_output, file_name)
+				self._move_genome_file(
+					genome_file_path, new_genome_file_path, stream_map, genome_id, sequence_min_length, set_of_sequence_names)
+				genome_id_to_path_map[genome_id] = new_genome_file_path
 
 	@staticmethod
 	def _get_new_name(name, set_of_sequence_names):
@@ -202,7 +265,7 @@ class GenomePreparation(SequenceValidator):
 			@type silent: bool
 
 			@return: True if the file is correctly formatted
-			@rtype: False | tuple[int|long, int|long]
+			@rtype: tuple[int|long, int|long]
 		"""
 		assert self.validate_file(file_path)
 		assert isinstance(file_format, basestring)
@@ -222,20 +285,20 @@ class GenomePreparation(SequenceValidator):
 
 		set_of_seq_id = set()
 		total_length = 0
+		sequence_count = 0
+		min_sequence_length = None
 		with open(file_path) as file_handle:
 			if not self._validate_file_start(file_handle, file_format):
-				if not silent:
-					self._logger.error("{}Invalid beginning of file '{}'.".format(prefix, os.path.basename(file_path)))
-				return False
-			sequence_count = 0
-			min_sequence_length = None
+				msg = "{}Invalid beginning of file '{}'.".format(prefix, os.path.basename(file_path))
+				self._logger.error(msg)
+				raise IOError(msg)
 			try:
 				for seq_record in SeqIO.parse(file_handle, file_format, alphabet=alphabet):
 					sequence_count += 1
 					if not self._validate_sequence_record(seq_record, set_of_seq_id, file_format, key=None, silent=False):
-						if not silent:
-							self._logger.error("{}{}. sequence '{}' is invalid.".format(prefix, sequence_count, seq_record.id))
-						return False
+						msg = "{}{}. sequence '{}' is invalid.".format(prefix, sequence_count, seq_record.id)
+						self._logger.error(msg)
+						raise IOError(msg)
 					if not min_sequence_length:
 						min_sequence_length = len(seq_record.seq)
 					total_length += len(seq_record.seq)
@@ -243,14 +306,10 @@ class GenomePreparation(SequenceValidator):
 						min_sequence_length = len(seq_record.seq)
 			except Exception as e:
 				if not silent:
-					self._logger.error("{}Corrupt sequence in file '{}'.\nException: {}".format(
-						prefix, os.path.basename(file_path), e.message))
+					msg = "{}Corrupt sequence in file '{}'.\nException: {}".format(prefix, os.path.basename(file_path), e.message)
+					self._logger.error(msg)
+					raise IOError(msg)
 				return False
 		if sequence_count == 0:
 			return 0, 0
 		return min_sequence_length, total_length
-
-# if len(seq_record.seq) < min_length_sequence:
-# 	if not silent:
-# 		self._logger.error("{}{}. sequence '{}' is too small. {} < {}".format(prefix, sequence_count, seq_record.id, len(seq_record.seq), min_length_sequence))
-# 	return False

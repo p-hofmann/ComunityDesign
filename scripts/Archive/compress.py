@@ -1,5 +1,5 @@
 __author__ = 'hofmann'
-__version__ = '0.0.1'
+__version__ = '0.0.3'
 
 import os
 import io
@@ -51,7 +51,7 @@ class Compress(Validator):
 			@return: None
 			@rtype: None
 		"""
-		assert logfile is None or isinstance(logfile, basestring) or self._is_stream(logfile)
+		assert logfile is None or isinstance(logfile, basestring) or self.is_stream(logfile)
 		assert isinstance(default_compression, basestring), "separator must be string"
 		assert isinstance(verbose, bool), "verbose must be true or false"
 		assert default_compression.lower() in self._open, "Unknown compression: '{}'".format(default_compression)
@@ -63,19 +63,6 @@ class Compress(Validator):
 		# 	self._logger.set_log_file(logfile)
 
 		self._default_compression = default_compression
-
-	@staticmethod
-	def _is_stream(stream):
-		"""
-			Test for stream
-
-			@param stream: Any kind of stream type
-			@type stream: file | io.FileIO | StringIO.StringIO
-
-			@return: True if stream
-			@rtype: bool
-		"""
-		return isinstance(stream, (file, io.FileIO, StringIO.StringIO)) or stream.__class__ is StringIO.StringIO
 
 	def get_compression_type(self, file_path):
 		"""
@@ -194,7 +181,7 @@ class Compress(Validator):
 			@type list_of_file_paths: list[str|unicode]
 			@param dst: Destination path, a directory or file path
 			@type dst: str | unicode
-			@param compresslevel: Higher level is slower but likely smaller. 0-9, except zip 0-8.
+			@param compresslevel: Higher level is slower but likely better. 0-9, except zip 0-8.
 			@type compresslevel: int
 			@param compression_type: "zip", "gz", "bz2",
 			@type compression_type: str | unicode
@@ -219,6 +206,42 @@ class Compress(Validator):
 		list_of_return_values = runThreadParallel(task_list, maxThreads=max_processors)
 		for index, return_value in enumerate(list_of_return_values):
 			assert return_value is None, "Compressing of '{}' failed. '{}'".format(list_of_file_paths[index], return_value)
+
+	def compress_list_tuples(
+		self, list_of_tuples, compresslevel=5,
+		compression_type=None, overwrite=False, max_processors=1):
+		"""
+			Compress list of files
+
+			@attention: When reading file and compression_type None, type will be guessed.
+
+			@param list_of_tuples: Path to file and destination folder
+			@type list_of_tuples: list[tuple[str|unicode, str|unicode]]
+			@param compresslevel: Higher level is slower but likely better. 0-9, except zip 0-8.
+			@type compresslevel: int
+			@param compression_type: "zip", "gz", "bz2",
+			@type compression_type: str | unicode
+			@param overwrite: If false, a path will renamed if not available
+			@type overwrite: bool
+			@param max_processors: Maximum number processors used for compressing files simultaneously
+			@type max_processors: int
+
+			@return: True if stream
+			@rtype: None
+		"""
+		task_list = []
+		for file_path, dst in list_of_tuples:
+			assert self.validate_dir(dst), "Bad destination: '{}', must be folder.".format(dst)
+			if self.validate_file(file_path):
+				args = (file_path, dst, compresslevel, compression_type, overwrite)
+				task_list.append(TaskThread(_compress_file, args))
+			else:
+				msg = "File not found '{}'".format(file_path)
+				self._logger.error(msg)
+				raise IOError(msg)
+		list_of_return_values = runThreadParallel(task_list, maxThreads=max_processors)
+		for index, return_value in enumerate(list_of_return_values):
+			assert return_value is None, "Compressing of '{}' failed. '{}'".format(list_of_tuples[index][0], return_value)
 
 
 def _compress_file(src, dst='./', compresslevel=5, compression_type=None, overwrite=False):

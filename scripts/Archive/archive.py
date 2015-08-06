@@ -1,5 +1,5 @@
 __author__ = 'hofmann'
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 import io
 import StringIO
@@ -55,7 +55,7 @@ class Archive(Compress):
 			@return: None
 			@rtype: None
 		"""
-		assert logfile is None or isinstance(logfile, basestring) or self._is_stream(logfile)
+		assert logfile is None or isinstance(logfile, basestring) or self.is_stream(logfile)
 		assert isinstance(default_compression, basestring), "separator must be string"
 		assert isinstance(verbose, bool), "verbose must be true or false"
 		assert default_compression.lower() in self._open, "Unknown compression: '{}'".format(default_compression)
@@ -65,14 +65,15 @@ class Archive(Compress):
 		self._open['tar'] = tarfile.open
 		self._default_compression = default_compression
 
-	def is_archive(self, file_path):
+	@staticmethod
+	def is_archive(file_path):
 		"""
 			Test if archive can be assumed by filename
 
 			@param file_path: Path to file
 			@type file_path: str | unicode
 
-			@return: True if stream
+			@return: True if file is archive
 			@rtype: str | None
 		"""
 		return tarfile.is_tarfile(file_path)

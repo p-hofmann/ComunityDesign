@@ -1,5 +1,5 @@
 __author__ = 'hofmann'
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 
 import io
 import os
@@ -72,6 +72,21 @@ class SequenceValidator(Validator):
 				result = False
 		return result
 
+	def _validate_sequence_record(self, seq_record, set_of_seq_id, file_format, key=None, silent=False):
+			result = True
+			if not self.validate_sequence(seq_record.seq, key=key, silent=silent):
+				result = False
+			if not self.validate_sequence_id(seq_record.id, used_ids=set_of_seq_id, key=key, silent=silent):
+				result = False
+			set_of_seq_id.add(seq_record.id)
+			if not self.validate_sequence_description(seq_record.description, key=key, silent=silent):
+				result = False
+			if file_format == "fastq":
+				if not self.validate_sequence_quality(
+					seq_record.letter_annotations["phred_quality"], key=key, silent=silent):
+					result = False
+			return result
+
 	def validate_sequence_file(self, file_path, file_format, sequence_type, ambiguous, key=None, silent=False):
 		"""
 			Validate a file to be correctly formatted
@@ -122,19 +137,7 @@ class SequenceValidator(Validator):
 			try:
 				for seq_record in SeqIO.parse(file_handle, file_format, alphabet=alphabet):
 					sequence_count += 1
-					result = True
-					if not self.validate_sequence(seq_record.seq, key=key, silent=silent):
-						result = False
-					if not self.validate_sequence_id(seq_record.id, used_ids=set_of_seq_id, key=key, silent=silent):
-						result = False
-					set_of_seq_id.add(seq_record.id)
-					if not self.validate_sequence_description(seq_record.description, key=key, silent=silent):
-						result = False
-					if file_format == "fastq":
-						if not self.validate_sequence_quality(
-							seq_record.letter_annotations["phred_quality"], key=key, silent=silent):
-							result = False
-					if not result:
+					if not self._validate_sequence_record(seq_record, set_of_seq_id, file_format, key=None, silent=False):
 						if not silent:
 							self._logger.error("{}{}. sequence '{}' is invalid.".format(prefix, sequence_count, seq_record.id))
 						return False
