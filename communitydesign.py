@@ -1,5 +1,5 @@
 __author__ = 'hofmann'
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 
 import os
 import random
@@ -73,7 +73,7 @@ class Community(object):
 		self.gauss_sigma = gauss_sigma
 		self.mode = mode
 		self.simulate_strains = False
-		if genomes_real and genomes_real <= genomes_total:
+		if genomes_real and genomes_real < genomes_total:
 			self.simulate_strains = True
 		self.verbose = verbose
 		self.id = identifier
