@@ -2,7 +2,7 @@
 
 __author__ = 'hofmann'
 __original_author__ = "Aaron Daring"
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 
 from scripts.parallel import TaskCmd, runCmdParallel, reportFailedCmd
@@ -300,7 +300,7 @@ class StrainSimulationWrapper(GenomeOrganizer):
 
 		if seed is not None:
 			random.seed(seed)
-			np_random.seed(hash(seed))
+			np_random.seed(abs(hash(seed)))
 
 		self._seed = random.randint(1000000, sys.maxsize)
 
