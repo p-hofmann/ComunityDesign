@@ -1,5 +1,5 @@
 __author__ = 'hofmann'
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 
 import os
 import random
@@ -9,6 +9,7 @@ from scripts.StrainSimulationWrapper.strainsimulationwrapper import StrainSimula
 from scripts.StrainSelector.strainselector import StrainSelector
 from scripts.PopulationDistribution.populationdistribution import PopulationDistribution
 from scripts.GenomePreparation.genomepreparation import GenomePreparation
+from scripts.Validator.validator import Validator
 
 
 # ##################################
@@ -18,13 +19,13 @@ from scripts.GenomePreparation.genomepreparation import GenomePreparation
 # ##################################
 
 
-class Community(object):
+class Community(Validator):
 
 	def __init__(
 		self, identifier, genomes_total, genomes_real, limit_per_otu, file_path_metadata_table,
 		file_path_genome_locations, file_path_gff_locations, ratio, mode,
 		log_mu, log_sigma, gauss_mu=None, gauss_sigma=None,
-		verbose=False):
+		logfile=None, verbose=True, debug=False):
 		"""
 		Accumulation of all community related information
 
@@ -54,18 +55,23 @@ class Community(object):
 		@type gauss_mu: int | long | float
 		@param gauss_sigma: Standard deviation of gauss distribution
 		@type gauss_sigma: int | long | float
+		@param logfile: file handler or file path to a log file
+		@type logfile: file | FileIO | StringIO | basestring
 		@param verbose: More output and user interaction is enabled.
 		@type verbose: bool
+		@param debug: Display debug messages
+		@type debug: bool
 		"""
 		assert genomes_real is None or genomes_real <= genomes_total
 		assert mode in PopulationDistribution.get_valid_modes()
+		super(Community, self).__init__(logfile, verbose, debug)
 
 		self.genomes_real = genomes_real
 		self.genomes_total = genomes_total
 		self.limit_per_otu = limit_per_otu
-		self.file_path_metadata_table = file_path_metadata_table
-		self.file_path_genome_locations = file_path_genome_locations
-		self.file_path_gff_locations = file_path_gff_locations
+		self.file_path_metadata_table = self.get_full_path(file_path_metadata_table)
+		self.file_path_genome_locations = self.get_full_path(file_path_genome_locations)
+		self.file_path_gff_locations = self.get_full_path(file_path_gff_locations)
 		self.ratio = ratio
 		self.log_mu = log_mu
 		self.log_sigma = log_sigma
@@ -78,6 +84,47 @@ class Community(object):
 		self.verbose = verbose
 		self.id = identifier
 
+	def has_valid_values(self):
+		if not self.validate_characters(self.id) or self.id is '':
+			return False
+
+		if not self.validate_characters(self.mode) or self.mode is '':
+			return False
+
+		if not self.validate_number(self.genomes_total, self.genomes_real):
+			return False
+
+		if not self.validate_number(self.genomes_real, 1, self.genomes_total):
+			return False
+
+		if not self.validate_number(self.ratio, 0, zero=False):
+			return False
+
+		if not self.validate_number(self.log_mu, 0, zero=False):
+			return False
+
+		if not self.validate_number(self.log_sigma, 0, zero=False):
+			return False
+
+		if not self.validate_number(self.gauss_mu):
+			return False
+
+		if not self.validate_number(self.gauss_sigma):
+			return False
+
+		if not self.validate_number(self.limit_per_otu, 1):
+			return False
+
+		if not self.validate_file(self.file_path_metadata_table):
+			return False
+
+		if not self.validate_file(self.file_path_genome_locations):
+			return False
+
+		if not self.validate_file(self.file_path_gff_locations):
+			return False
+
+		return True
 
 # ##################################
 #
