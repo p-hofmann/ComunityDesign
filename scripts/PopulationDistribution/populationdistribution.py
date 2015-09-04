@@ -1,6 +1,6 @@
 __author__ = 'hofmann'
 __original_author__ = 'eik.dahms@uni-duesseldorf.de'
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 import random
 import matplotlib.pyplot as plt
@@ -41,11 +41,8 @@ class PopulationDistribution(Validator):
 		"""
 		assert isinstance(verbose, bool)
 		assert isinstance(debug, bool)
-		super(PopulationDistribution, self).__init__(logfile, verbose)
+		super(PopulationDistribution, self).__init__(logfile, verbose, debug)
 
-		self._debug = debug
-		if debug:
-			self._logger.set_level(self._logger.DEBUG)
 		if seed is not None:
 			random.seed(seed)
 
@@ -243,7 +240,8 @@ class PopulationDistribution(Validator):
 		plt.show()
 
 	def get_lists_of_distributions(
-		self, size_of_population, number_of_samples, modus, log_mu, log_sigma, gauss_mu=None, gauss_sigma=None):
+		self, size_of_population, number_of_samples, modus, log_mu, log_sigma, gauss_mu=None, gauss_sigma=None,
+		view_distribution=False):
 		"""
 			Get list of distributions of all samples
 
@@ -279,7 +277,6 @@ class PopulationDistribution(Validator):
 		if gauss_sigma is None:
 			# TODO: gauss sigma needs proper dependence of log sigma
 			gauss_sigma = 3 * log_sigma
-		view_distribution = self._verbose
 
 		list_population = self._get_initial_list(size_of_population, number_of_samples)
 		while True:
