@@ -352,7 +352,8 @@ class CommunityDesign(GenomePreparation):
 			number_of_samples=number_of_samples,
 			modus=community.mode,
 			log_mu=community.log_mu, log_sigma=community.log_sigma,
-			gauss_mu=community.gauss_mu, gauss_sigma=community.gauss_sigma
+			gauss_mu=community.gauss_mu, gauss_sigma=community.gauss_sigma,
+			view_distribution=community.verbose
 		)
 
 		# move and clean up files (removes sequence description)
